@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	redis "github.com/redis/go-redis"
+	redis "github.com/redis/go-redis/v9"
 )
 
 // структура для подключения к redis
@@ -32,7 +32,7 @@ func NewClient(ctx context.Context, cfg Config) (*redis.Client, error) {
 		WriteTimeout: cfg.Timeout,
 	})
 
-	// проверка соединения (пингуем по пустоиу контексту)
+	// проверка соединения (пингуем по пустому контексту)
 	if err := db.Ping(ctx).Err(); err != nil {
 		log.Printf("failed to connect to redis server: %s\n", err.Error())
 		return nil, err

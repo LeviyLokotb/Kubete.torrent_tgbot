@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"kubete_torrentBot/strgred"
 	"log"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	redis "github.com/redis/go-redis"
+	redis "github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -26,11 +27,11 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	// подключение к redis (пока не готово)
+	// подключение к redis
 	cfg := strgred.Config{
-		Addr:        "localhost:6379",
-		Password:    "test1234",
-		User:        "testuser",
+		Addr:        "localhost:6380",
+		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
+		User:        "leosah",
 		DB:          0,
 		MaxRetries:  5,
 		DialTimeout: 10 * time.Second,
@@ -55,7 +56,7 @@ func main() {
 
 			// запрос к redis
 			///////////////////
-			_, err := db.Get(context.Background(), chat_id).Result()
+			_, err := db.Get(context.Background(), fmt.Sprint(chat_id)).Result()
 			if err == redis.Nil {
 				// сценарий неизвестного пользователя
 				status = "Неизвестный"
