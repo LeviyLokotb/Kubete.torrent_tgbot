@@ -1,14 +1,10 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"kubete_torrentBot/strgred"
+	"kubete_torrentBot/botlogic"
 	"log"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	redis "github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -25,20 +21,8 @@ func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
+	// список новых сообщений
 	updates := bot.GetUpdatesChan(u)
-
-	// подключение к redis
-	cfg := strgred.Config{
-		Addr:        "localhost:6380",
-		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
-		User:        "leosah",
-		DB:          0,
-		MaxRetries:  5,
-		DialTimeout: 10 * time.Second,
-		Timeout:     5 * time.Second,
-	}
-
-	db, err := strgred.NewClient(context.Background(), cfg)
 
 	// обработка сообщений
 	for update := range updates {
@@ -48,51 +32,25 @@ func main() {
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
 			// основная часть
-			var msg, chat_id tgbotapi.MessageConfig
+			var msg tgbotapi.MessageConfig
 
-			chat_id = tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			chat_id := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text).Text
 
-			var status string
-
-			// запрос к redis
-			///////////////////
-			_, err := db.Get(context.Background(), fmt.Sprint(chat_id)).Result()
-			if err == redis.Nil {
-				// сценарий неизвестного пользователя
-				status = "Неизвестный"
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Ваш статус: "+status+".\nЗарегистрируйтесь:")
-				bot.Send(msg)
-				// запрос на авторизацию
-				/*...*/
-			} else if err != nil {
-				// ошибки
-				log.Printf("failed to get value, error: %v\n", err)
-			} else {
-				// сценарий анонимного пользователя
-				status = "Анонимный"
-				// требуем вход
-				/*...*/
+			// коммады
+			notok := true
+			for _, command := range botlogic.OKprocessing {
+				if command == update.Message.Command() {
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, botlogic.Processing(command, chat_id))
+					notok = false
+				}
 			}
-			///////////////////
-
-			// комманды
-
-			commands_text := "/start\n- начало работы\n" + "/help\n- информация\n" + "/status\n- статус пользователя"
-
-			switch update.Message.Command() {
-			case "start":
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Hello, telega user! I useless now...")
-			case "help":
-				help_text := "Вот что я могу:\n" + commands_text + "\nэто не так уж и плохо, как по мне"
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, help_text)
-			case "status":
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Ваш статус: "+status+".")
-			default:
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Нет такой команды")
+			if notok {
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Нет такой комманды")
 			}
 
-			//отправляем ответ
 			bot.Send(msg)
+			//отправляем ответ
+
 		}
 	}
 }
