@@ -47,7 +47,8 @@ func main() {
 			if notok {
 				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Нет такой комманды")
 			}
-
+			// режим markdown для форматирования текста
+			msg.ParseMode = "markdown"
 			bot.Send(msg)
 			//отправляем ответ
 
