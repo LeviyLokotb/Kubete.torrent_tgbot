@@ -34,7 +34,7 @@ func main() {
 			// основная часть
 			var msg tgbotapi.MessageConfig
 
-			chat_id := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text).Text
+			chat_id := update.Message.Chat.ID
 
 			// коммады
 			notok := true
@@ -48,7 +48,7 @@ func main() {
 				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Нет такой комманды")
 			}
 			// режим markdown для форматирования текста
-			msg.ParseMode = "markdown"
+			//msg.ParseMode = "markdown"
 			bot.Send(msg)
 			//отправляем ответ
 

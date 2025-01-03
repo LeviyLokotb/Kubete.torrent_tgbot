@@ -2,6 +2,7 @@ package strgred
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -39,4 +40,95 @@ func NewClient(ctx context.Context, cfg Config) (*redis.Client, error) {
 	}
 
 	return db, nil
+}
+
+// подключение к редису
+func Connection() *redis.Client {
+	cfg := Config{
+		Addr:        "localhost:6380",
+		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
+		User:        "leosah",
+		DB:          0,
+		MaxRetries:  5,
+		DialTimeout: 10 * time.Second,
+		Timeout:     5 * time.Second,
+	}
+
+	db, err := NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Panic("db creating fail: ", err)
+	}
+
+	return db
+}
+
+func Redis_add(key, value any) {
+	// подключаемся к redis
+	cfg := Config{
+		Addr:        "localhost:6380",
+		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
+		User:        "leosah",
+		DB:          0,
+		MaxRetries:  5,
+		DialTimeout: 10 * time.Second,
+		Timeout:     5 * time.Second,
+	}
+
+	db, err := NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Panic("db creating fail: ", err)
+	}
+	// вносим значение
+	err2 := db.Set(context.Background(), fmt.Sprint(key), value, 0).Err()
+	if err2 != nil {
+		log.Panic("ERROR in redis_add: ", err)
+	}
+}
+
+func Redis_get(key any) string {
+	// подключаемся к redis
+	cfg := Config{
+		Addr:        "localhost:6380",
+		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
+		User:        "leosah",
+		DB:          0,
+		MaxRetries:  5,
+		DialTimeout: 10 * time.Second,
+		Timeout:     5 * time.Second,
+	}
+
+	db, err := NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Panic("db creating fail: ", err)
+	}
+	// получаем значение из бд
+	value, err := db.Get(context.Background(), fmt.Sprint(key)).Result()
+	if err == redis.Nil {
+		return "nil"
+	}
+	return value
+}
+
+func Redis_delete(key any) bool {
+	cfg := Config{
+		Addr:        "localhost:6380",
+		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
+		User:        "leosah",
+		DB:          0,
+		MaxRetries:  5,
+		DialTimeout: 10 * time.Second,
+		Timeout:     5 * time.Second,
+	}
+
+	db, err := NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Panic("db creating fail: ", err)
+	}
+
+	ok, err := db.Del(context.Background(), fmt.Sprint(key)).Result()
+	if err != nil {
+		log.Panic("ERROR in redis_delete: ", err)
+	}
+
+	return ok > 0
 }
