@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	redis "github.com/redis/go-redis/v9"
@@ -131,4 +132,42 @@ func Redis_delete(key any) bool {
 	}
 
 	return ok > 0
+}
+
+// поиск ключей по значению find
+func GetSomeIDs(find string) []int64 {
+	cfg := Config{
+		Addr:        "localhost:6380",
+		Password:    "ylp3QnB(VR0v>oL<Y3heVgsdE)+O+RZ",
+		User:        "leosah",
+		DB:          0,
+		MaxRetries:  5,
+		DialTimeout: 10 * time.Second,
+		Timeout:     5 * time.Second,
+	}
+
+	db, err := NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Panic("db creating fail: ", err)
+	}
+
+	var results []int64
+
+	keys, err2 := db.Keys(context.Background(), "*").Result()
+	if err2 != nil {
+		log.Panic("ERROR in GetSomeIDs: ", err2)
+	}
+	//log.Println(keys)
+
+	for _, key := range keys {
+		status := Redis_get(key)
+		intkey, errstr := strconv.Atoi(key)
+		if errstr != nil {
+			log.Panic("ERROR in GetSomeIDs: strconv error: ", errstr)
+		}
+		if status == find {
+			results = append(results, int64(intkey))
+		}
+	}
+	return results
 }

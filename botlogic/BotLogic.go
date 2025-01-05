@@ -25,7 +25,7 @@ func Processing(request string, chat_id int64) string {
 		strgred.Redis_add(chat_id /*status*/, "Авторизованный")
 		msg = "Пользователь внесён в базу. Текущий статус: " + get_status(chat_id)
 	case "login":
-		msg = login(status)
+		msg = login(status, chat_id)
 	case "login_type":
 		msg = login_type(status)
 	case "logout":
@@ -66,7 +66,7 @@ func get_status(chat_id int64) string {
 	return status
 }
 
-func login(status string) string {
+func login(status string, chat_id int64) string {
 	switch status {
 	case "Неизвестный":
 		// предлагаем авторизацию
@@ -77,15 +77,17 @@ func login(status string) string {
 		code := 1 // возвращаемый код (временно)
 		switch code {
 		case 1: // не опознанный/истёкший токен:
-			//! удаляем из redis chat_id
-			return login("Неизвестный")
+			strgred.Redis_delete(chat_id)
+			return login("Неизвестный", chat_id)
 		case 2: // в доступе отказано:
-			//! удаляем из redis chat_id
+			strgred.Redis_delete(chat_id)
 			return "Неудачная авторизация."
 		case 3: // доступ предоставлен
-			// получаем jwt-токен доступа и токен обновления
-			// сохраняем оба токена и статус Авторизованный в базу
-			// обрабатываем запрос по статусу "Авторизованный"
+			//! получаем jwt-токен доступа и токен обновления
+			//! сохраняем оба токена и статус Авторизованный в базу
+			strgred.Redis_delete(chat_id)
+			strgred.Redis_add(chat_id, "Авторизованный")
+			//! обрабатываем запрос по статусу "Авторизованный"
 		default:
 			log.Panic("Error: Unknown autorization code")
 			return ""
@@ -106,7 +108,7 @@ func login_type(status string) string {
 		// получаем ответ и отправляем
 		return "Модуль авторизации не подключен.\nComing soon..."
 	case "Анонимный":
-		// генерируем токенн входа
+		// генерируем токен входа
 		// заменяем токен входа в redis
 		// отправляем токен входа модулю авторизации
 		// получаем ответ и отправляем
@@ -132,4 +134,45 @@ func logout_all(chat_id int64) string {
 	logout(chat_id)
 	//! запрос модулю авторизации /logout, отправляем токен обновления
 	return "Сеанс завершён на всех устройствах."
+}
+
+func Entry() map[int64]string {
+	replies := make(map[int64]string)
+	chat_ids := strgred.GetSomeIDs("Анонимный")
+
+	for _, user_id0 := range chat_ids {
+		user_id := int64(user_id0)
+		//! запрос модулю авторизации - проверка токена входа
+		code := 1 // возвращаемый код (временно)
+		switch code {
+		case 1: // неопознаный токен или время действия закончилось
+			strgred.Redis_delete(user_id)
+		case 2: // в доступе отказано
+			strgred.Redis_delete(user_id)
+			replies[user_id] = "Статус входа: неудачная авторизация"
+		case 3: // доступ предоставлен
+			//! получаем jwt-токен доступа и токен обновления
+			//! сохраняем оба токена и статус Авторизованный в базу
+			strgred.Redis_delete(user_id)
+			strgred.Redis_add(user_id, "Авторизованный")
+			replies[user_id] = "Статус входа: успешная авторизация"
+		default:
+			log.Panic("Error: Unknown autorization code")
+		}
+	}
+	return replies
+}
+
+func Alert() map[int64]string {
+	notifications := make(map[int64]string)
+
+	chat_ids := strgred.GetSomeIDs("Авторизованный")
+
+	for _, user_id := range chat_ids {
+		//! запрос главному модулю на URL /notification по токену доступа
+		notic := "тестовое уведомление" // уведомление (временно)
+		notifications[int64(user_id)] = notic
+		//! запрос главному модулю на удаление уведомлений по JWT токену доступа
+	}
+	return notifications
 }
