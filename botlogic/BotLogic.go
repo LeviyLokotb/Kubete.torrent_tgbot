@@ -6,6 +6,7 @@ import (
 )
 
 func Get_status(chat_id int64) string {
+
 	// получаем статус из бд
 	status := strgred.Redis_get(chat_id)
 

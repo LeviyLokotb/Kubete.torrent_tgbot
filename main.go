@@ -13,7 +13,14 @@ var msgs []tgbotapi.MessageConfig
 
 var mutex sync.Mutex
 
+var msgs []tgbotapi.MessageConfig
+
+var mutex sync.Mutex
+
 func main() {
+	// запускаем таймер в отдельной горутине
+	go Timer()
+
 	// запускаем таймер в отдельной горутине
 	go Timer()
 
