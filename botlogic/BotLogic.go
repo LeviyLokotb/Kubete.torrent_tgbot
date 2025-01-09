@@ -22,6 +22,17 @@ func Get_data(chat_id int64) (string, string, string) {
 	return strgred.Redis_get(chat_id)
 }
 
+func SetStatus(chat_id int64, neo string) {
+	strgred.Redis_delete(chat_id)
+	if neo == "Анонимный" {
+		strgred.Redis_add2(chat_id, neo, strgred.GenerateEntryToken())
+	}
+	if neo == "Авторизованный" {
+		strgred.Redis_add(chat_id, neo, "fake_acess_token", "fake_update_token")
+	}
+
+}
+
 func SendToMain(chat_id int64, code string) string {
 	status, acess_token, _ := strgred.Redis_get(chat_id)
 	result := code + "\n" + acess_token
@@ -34,7 +45,7 @@ func SendToMain(chat_id int64, code string) string {
 
 		au_reply := remote.SendAu(result)
 		switch au_reply {
-		case "401": //токен устарел или не существует
+		case "401": // токен устарел или не существует
 			strgred.Redis_delete(chat_id)
 			return "Вы не залогинены! Необходимо авторизоваться:\n/login"
 		default: // модуль ответил новой парой токенов

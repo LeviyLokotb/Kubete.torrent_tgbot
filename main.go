@@ -67,8 +67,8 @@ func main() {
 				args := update.Message.CommandArguments()
 
 				// не даём выполнять команды неищвестным и анонимным
-				if status != "Авторизованный" {
-					if command != "start" && command != "help" && command != "status" && command != "login" {
+				if status == "Неизвестный" || status == "Анонимный" {
+					if command != "start" && command != "help" && command != "status" && command != "login" && command != "anonme" && command != "aume" {
 						command = "login"
 						msg1 := tgbotapi.NewMessage(update.Message.Chat.ID, "Сначала пройдите авторизацию")
 						bot.Send(msg1)
@@ -129,14 +129,14 @@ func main() {
 					/courseStudentAdd <id дисциплины> <id пользователя> - записать студента на дисциплину
 					/courseStudentDelete <id дисциплины> <id пользователя> - отчислить студента с дисциплины
 					/courseAdd - создать дисциплину
-					/courseDelete - удалить дисциплину`
+					/courseDelete <id> - удалить дисциплину`
 
 					help4 :=
 						`4. Команды, связанные с вопросами:
 					(<id> - id вопроса)
-					/questList - список всех ваших вопросов
+					/questList <id пользователя> <id теста>- список всех ваших вопросов
 					/questInfo <id вопроса> <id ответа> - информация о вопросе (Название, Текст, id, Ответ)
-					/questUpdate <id вопроса> <id версии> - изменить вопрос
+					/questUpdate <id вопроса> <id ответа> - изменить вопрос
 					/questCreate <id теста> - создать вопрос
 					/questDelete <id> - удалить вопрос`
 
@@ -147,13 +147,14 @@ func main() {
 					/testQuestAdd <id теста> <id вопроса> - добавить вопрос в тест
 					/testProcedureChange <id> - изменить порядок вопросов в тесте
 					/testAnswerUsersList <id> - список пользователей, прошедших тест
-					/testUserAnswers <id пользователя> <id теста>, - посмотореть ответы пользователя на тест и оценку`
+					/testUserAnswers <id пользователя> <id теста>, - посмотореть ответы пользователя на тест
+					/testUserMark <id пользователя> <id теста> - посмотреть оценку за тест`
 
 					help6 :=
 						`6. Комманды, связанные с попытками
 					(<id> - id теста)
 					/attempCreate <id> - создать попытку
-					/attempDelete <id> - изменить попытку
+					/attempUpdate <id> - изменить попытку
 					/attempEnd <id> - завершить попытку
 					/attempRead <id пользователя> <id теста> - посмтореть попытку пользователя`
 
@@ -200,6 +201,12 @@ func main() {
 
 							git_ref := remote.SendAu("/GET github")
 							ya_ref := remote.SendAu("/GET yandex")
+							if git_ref == "1" {
+								git_ref = "https://github.com"
+							}
+							if ya_ref == "1" {
+								ya_ref = "https://yandex.ru"
+							}
 							keyboard := tgbotapi.NewInlineKeyboardMarkup(
 								tgbotapi.NewInlineKeyboardRow(
 									tgbotapi.NewInlineKeyboardButtonURL("🐱Github", git_ref),
@@ -263,9 +270,179 @@ func main() {
 				case "course":
 					text := botlogic.SendToMain(chat_id, "course:data:read "+"id_course="+args)
 					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
-				case "courseName":
-					text := botlogic.SendToMain(chat_id, "course:data:read "+"id_course="+args)
+				case "courseChangeName":
+					text := botlogic.SendToMain(chat_id, "course:name:write "+"id_course="+args)
 					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseChangeInfo":
+					text := botlogic.SendToMain(chat_id, "course:info:write "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseTestList":
+					text := botlogic.SendToMain(chat_id, "course:testList:read:other "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testActive":
+					text := botlogic.SendToMain(chat_id, "course:test:read:other "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testActivate":
+					text := botlogic.SendToMain(chat_id, "course:test:activate "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testDeactivate":
+					text := botlogic.SendToMain(chat_id, "course:test:deactivate "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testAdd":
+					text := botlogic.SendToMain(chat_id, "course:test:add "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "ID нового теста: "+text)
+				case "testDelete":
+					text := botlogic.SendToMain(chat_id, "course:test:del "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseStudentList":
+					text := botlogic.SendToMain(chat_id, "course:userList:read "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseStudentAdd":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "course:user:add "+"id_course="+s[0]+" id_user="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseStudentDelete":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "course:user:delete "+"id_course="+s[0]+" id_user="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseAdd":
+					text := botlogic.SendToMain(chat_id, "course:add")
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "ID новой дисциплины: "+text)
+				case "courseDelete":
+					text := botlogic.SendToMain(chat_id, "course:del "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "questList":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "quest:list:read:other "+"id_user="+s[0]+" id_test="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "questInfo":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "quest:read "+"id_test="+s[0]+" id_answer="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "questUpdate":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "quest:update "+"id_test="+s[0]+" id_answer="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "questCreate":
+					text := botlogic.SendToMain(chat_id, "quest:create "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "questDelete":
+					text := botlogic.SendToMain(chat_id, "quest:del "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testQuestDelete":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "test:quest:del "+"id_test="+s[0]+" id_quest="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testQuestAdd":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "test:quest:add "+"id_test="+s[0]+" id_quest="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testProcedureChange":
+					text := botlogic.SendToMain(chat_id, "test:quest:update "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testAnswerUsersList":
+					text := botlogic.SendToMain(chat_id, "test:answer:read "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testUserAnswers":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "test:answer:read:other "+"id_user="+s[0]+" id_test="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "testUserMark":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "test:answer:read:other "+"id_user="+s[0]+" id_test="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "attempCreate":
+					text := botlogic.SendToMain(chat_id, "test:answer:create "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "attempUpdate":
+					text := botlogic.SendToMain(chat_id, "test:answer:update "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "attempEnd":
+					text := botlogic.SendToMain(chat_id, "test:answer:del "+"id_test="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "attempRead":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "test:answer:read:other "+"id_user="+s[0]+" id_test="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "answerCreate":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "answer:create "+"id_test="+s[0]+" id_answer="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "answerRead":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "answer:read "+"id_test="+s[0]+" id_answer="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "answerChange":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "answer:update "+"id_test="+s[0]+" id_answer="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "answerDelete":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "answer:del "+"id_test="+s[0]+" id_answer="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "anonme":
+					botlogic.SetStatus(chat_id, "Анонимный")
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Статус изменён на Анонимный")
+				case "aume":
+					botlogic.SetStatus(chat_id, "Авторизованный")
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Статус изменён на Авторизованный")
+
 				default:
 					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Нет такой команды")
 				}
