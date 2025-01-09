@@ -2,16 +2,14 @@ package main
 
 import (
 	"kubete_torrentBot/botlogic"
+	"kubete_torrentBot/remote"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-
-var msgs []tgbotapi.MessageConfig
-
-var mutex sync.Mutex
 
 var msgs []tgbotapi.MessageConfig
 
@@ -92,7 +90,7 @@ func main() {
 					/help <номер страницы>` + "\n"
 
 					help1 :=
-						`1. Команды бота и авторизация
+						`1. Команды бота и авторизация:
 					/start - начало работы
 					/help - возможности бота
 					/status - статус пользователя (Неизвестный/Анонимный/Авторизованный)
@@ -102,8 +100,8 @@ func main() {
 					/logout all=true - на всех устройствах`
 
 					help2 :=
-						`2. Команды, связанные с пользователями 
-					(<id> - id пользователя. Не вводите если операция направлена на вас)
+						`2. Команды, связанные с пользователями:
+					(<id> - id пользователя)
 					/userList - список пользователей
 					/name <id> - посмотреть ФИО пользователя
 					/nameChange <id> - изменить ФИО пользователя
@@ -115,10 +113,10 @@ func main() {
 					/unblock <id> - разблокировать пользователя`
 
 					help3 :=
-						`3. Комманды, связанные с дисциплинами
+						`3. Комманды, связанные с дисциплинами:
 					(<id> - id дисциплины)
 					/courseList - список дисциплин
-					/course <id> - информация о дисциплине (Название, Описание, ID преподавателя)
+					/course <id> - полная иформация о курсе
 					/courseChangeName <id> - изменить название дисциплины
 					/courseChangeInfo <id> - изменить описание дисциплины
 					/courseTestList <id> - список тестов дисциплины
@@ -134,13 +132,37 @@ func main() {
 					/courseDelete - удалить дисциплину`
 
 					help4 :=
-						`4. Команды, связанные с вопросами
+						`4. Команды, связанные с вопросами:
 					(<id> - id вопроса)
 					/questList - список всех ваших вопросов
-					/questInfo <id> - информация о вопросе (Название, Текст, id, Ответ)
-					/questUpdate <id> - изменить вопрос
-					/questCreate - создать вопрос
-					/questDelete <id> - удалить тест`
+					/questInfo <id вопроса> <id ответа> - информация о вопросе (Название, Текст, id, Ответ)
+					/questUpdate <id вопроса> <id версии> - изменить вопрос
+					/questCreate <id теста> - создать вопрос
+					/questDelete <id> - удалить вопрос`
+
+					help5 :=
+						`5. Команды, связанные с тестами:
+					(<id> - id теста)
+					/testQuestDelete <id теста> <id вопроса> - удалить вопрос из теста (только если ещё не было попыток прохождения)
+					/testQuestAdd <id теста> <id вопроса> - добавить вопрос в тест
+					/testProcedureChange <id> - изменить порядок вопросов в тесте
+					/testAnswerUsersList <id> - список пользователей, прошедших тест
+					/testUserAnswers <id пользователя> <id теста>, - посмотореть ответы пользователя на тест и оценку`
+
+					help6 :=
+						`6. Комманды, связанные с попытками
+					(<id> - id теста)
+					/attempCreate <id> - создать попытку
+					/attempDelete <id> - изменить попытку
+					/attempEnd <id> - завершить попытку
+					/attempRead <id пользователя> <id теста> - посмтореть попытку пользователя`
+
+					help7 :=
+						`7. Комманды, связанные с ответами
+					/answerCreate <id теста> <id ответа> - создать ответ
+					/answerRead <id теста> <id ответа> - посмотреть ответ
+					/answerChange <id теста> <id ответа> - изменить ответ
+					/answerDelete <id теста> <id ответа> - удалить ответ`
 
 					help_text := head
 					switch args {
@@ -150,6 +172,12 @@ func main() {
 						help_text += help3
 					case "4":
 						help_text += help4
+					case "5":
+						help_text += help5
+					case "6":
+						help_text += help6
+					case "7":
+						help_text += help7
 					default:
 						help_text += help1
 					}
@@ -169,12 +197,15 @@ func main() {
 					default:
 						switch status {
 						case "Неизвестный":
+
+							git_ref := remote.SendAu("/GET github")
+							ya_ref := remote.SendAu("/GET yandex")
 							keyboard := tgbotapi.NewInlineKeyboardMarkup(
 								tgbotapi.NewInlineKeyboardRow(
-									tgbotapi.NewInlineKeyboardButtonURL("🐱Github", "https://github.com"),
+									tgbotapi.NewInlineKeyboardButtonURL("🐱Github", git_ref),
 								),
 								tgbotapi.NewInlineKeyboardRow(
-									tgbotapi.NewInlineKeyboardButtonURL("📕Яндекс ID", "https://yandex.ru"),
+									tgbotapi.NewInlineKeyboardButtonURL("📕Яндекс ID", ya_ref),
 								),
 								tgbotapi.NewInlineKeyboardRow(
 									tgbotapi.NewInlineKeyboardButtonData("🧾Код", "button_code"),
@@ -194,14 +225,53 @@ func main() {
 					} else {
 						msg = tgbotapi.NewMessage(update.Message.Chat.ID, botlogic.Logout(chat_id))
 					}
+				case "userList":
+					text := botlogic.SendToMain(chat_id, "users:list:read")
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "name":
+					text := botlogic.SendToMain(chat_id, "users:fullname:read:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "nameChange":
+					text := botlogic.SendToMain(chat_id, "users:fullname:write:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "userData":
+					text := botlogic.SendToMain(chat_id, "users:data:read:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "role":
+					text := botlogic.SendToMain(chat_id, "users:roles:read:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "roleChange":
+					s := strings.SplitAfter(args, " ")
+					if len(s) != 2 {
+						msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверное число аргументов")
+						break
+					}
+					text := botlogic.SendToMain(chat_id, "users:roles:write:other "+"id_user="+s[0]+" role="+s[1])
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "blockInfo":
+					text := botlogic.SendToMain(chat_id, "users:block:read:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "block":
+					text := botlogic.SendToMain(chat_id, "users:block:write:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "unblock":
+					text := botlogic.SendToMain(chat_id, "users:unblock:write:other "+"id_user="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseList":
+					text := botlogic.SendToMain(chat_id, "course:list:read")
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "course":
+					text := botlogic.SendToMain(chat_id, "course:data:read "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
+				case "courseName":
+					text := botlogic.SendToMain(chat_id, "course:data:read "+"id_course="+args)
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 				default:
 					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Нет такой команды")
 				}
 
-				// режим markdown для форматирования текста
-				//msg.ParseMode = "markdown"
-				bot.Send(msg)
 				//отправляем ответ
+				bot.Send(msg)
 
 			} else if update.CallbackQuery != nil {
 				// обработка нажатия на кнопку

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	redis "github.com/redis/go-redis/v9"
@@ -54,20 +56,35 @@ var cfg Config = Config{
 	Timeout:     5 * time.Second,
 }
 
-func Redis_add(key, value any) {
+func Redis_add(key int64, status, acсess_token, update_token string) {
 
 	db, err := NewClient(context.Background(), cfg)
 	if err != nil {
 		log.Panic("db creating fail: ", err)
 	}
 	// вносим значение
+	value := CreateValue3(status, acсess_token, update_token)
 	err2 := db.Set(context.Background(), fmt.Sprint(key), value, 0).Err()
 	if err2 != nil {
 		log.Panic("ERROR in redis_add: ", err)
 	}
 }
 
-func Redis_get(key any) string {
+func Redis_add2(key int64, status, entry_token string) {
+
+	db, err := NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Panic("db creating fail: ", err)
+	}
+	// вносим значение
+	value := CreateValue2(status, entry_token)
+	err2 := db.Set(context.Background(), fmt.Sprint(key), value, 0).Err()
+	if err2 != nil {
+		log.Panic("ERROR in redis_add: ", err)
+	}
+}
+
+func Redis_get(key any) (string, string, string) {
 
 	db, err := NewClient(context.Background(), cfg)
 	if err != nil {
@@ -76,9 +93,9 @@ func Redis_get(key any) string {
 	// получаем значение из бд
 	value, err := db.Get(context.Background(), fmt.Sprint(key)).Result()
 	if err == redis.Nil {
-		return "nil"
+		return "nil", "", ""
 	}
-	return value
+	return SplitValue(value)
 }
 
 func Redis_delete(key any) bool {
@@ -113,7 +130,7 @@ func GetSomeIDs(find string) []int64 {
 	//log.Println(keys)
 
 	for _, key := range keys {
-		status := Redis_get(key)
+		status, _, _ := Redis_get(key)
 		intkey, errstr := strconv.Atoi(key)
 		if errstr != nil {
 			log.Panic("ERROR in GetSomeIDs: strconv error: ", errstr)
@@ -123,4 +140,39 @@ func GetSomeIDs(find string) []int64 {
 		}
 	}
 	return results
+}
+
+// объединяем статус, access_token и update_token
+func CreateValue3(status, access_token, update_token string) string {
+	return status + "\n" + access_token + "\n" + update_token
+}
+
+// объединаем статус и entry_token
+func CreateValue2(status, entry_tocken string) string {
+	return status + "\n" + entry_tocken
+}
+
+// достаём из строки разные штуки
+func SplitValue(value string) (string, string, string) {
+	lines := strings.SplitAfter(value, "\n")
+	status := lines[0]
+	var token1, token2 string
+	token1 = lines[1] //тут либо токен входа (тогда второй пустой) либо токен доступа (тогда второй токен обновления)
+
+	if len(lines) > 2 {
+		token2 = lines[2] //токен обновления
+	} else {
+		token2 = ""
+	}
+	return status, token1, token2
+}
+
+func GenerateEntryToken() string {
+	ABC := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890.<>_-=+*[]{}()"
+	result := ""
+	for i := 0; i < 16; i++ {
+		rand.Seed(time.Now().UnixNano())
+		result += string(ABC[rand.Intn(76)])
+	}
+	return result
 }
